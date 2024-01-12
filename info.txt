@@ -1,0 +1,70 @@
+       document.addEventListener('DOMContentLoaded', function () {
+            // Retrieve the saved rowIndex from localStorage
+            const savedRowIndex = localStorage.getItem('rowIndex');
+
+            if (savedRowIndex) {
+                // Fetch the CSV data and display the user's information
+                displayUserProfile(savedRowIndex);
+            } else {
+                // Handle the case where rowIndex is not available
+                console.error('Row index not found in localStorage.');
+            }
+        });
+
+
+appcsript 
+// Google Apps Script Code (Code.gs)
+
+function doPost(e) {
+  // Get the data and username from the POST request
+  var data = e.parameter.data;
+  var username = e.parameter.username;
+
+  // Open the Google Sheet by its ID
+  var sheet = SpreadsheetApp.openById('16K9RvbmiEfGpgNicD1glyygFTHXq0h0Fn8IPu7c8pb4').getActiveSheet();
+
+  // Find the row containing usernames dynamically
+  var rows = sheet.getDataRange().getValues();
+  var usernameRow;
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].indexOf(username) !== -1) {
+      usernameRow = i;
+      break;
+    }
+  }
+
+  if (usernameRow !== undefined) {
+    // Set the desired row to the next empty row
+    var desiredRow = getNextEmptyRow(sheet, usernameRow + 1); // Adding 1 to move to the next row
+
+    // Get the range for the desired cell in the same column as the specified username and update the value
+    var columnIndex = rows[usernameRow].indexOf(username) + 1; // 1-based index
+    var cell = sheet.getRange(desiredRow, columnIndex);
+
+    // Check if the cell is not empty, then move to the next empty row
+    while (cell.getValue() !== "") {
+      desiredRow++;
+      cell = sheet.getRange(desiredRow, columnIndex);
+    }
+
+    // Update the value in the cell
+    cell.setValue(data);
+
+    // Return a response (optional)
+    return ContentService.createTextOutput('Data added successfully').setMimeType(ContentService.MimeType.TEXT);
+  } else {
+    // Username not found
+    return ContentService.createTextOutput('Username not found').setMimeType(ContentService.MimeType.TEXT);
+  }
+}
+
+// Function to get the next empty row in a sheet
+function getNextEmptyRow(sheet, startRow) {
+  var column = sheet.getRange(1, 1, sheet.getLastRow(), 1).getValues();
+  for (var i = startRow; i <= sheet.getLastRow(); i++) {
+    if (column[i - 1][0] === "") {
+      return i;
+    }
+  }
+  return sheet.getLastRow() + 1;
+}

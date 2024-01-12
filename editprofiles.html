@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Row Data</title>
+</head>
+
+<body>
+    <div>
+        <h2>Edit Row Data</h2>
+        <div id="rowData"></div>
+        <button onclick="saveChanges()">Save Changes</button>
+        <p id="saveMessage" style="color: green; display: none;">Data saved successfully!</p>
+    </div>
+
+    <script>
+        const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRm48hnUwaJhf04Q7c-QOWvVSLCWCghP2lIihDV-kCSTAoKROFRQn6kaeLoRXjQ7bLKW2Rz12oYcRaT/pub?output=csv';
+
+        // Get the saved row index from localStorage
+        const savedRowIndex = localStorage.getItem('rowIndex');
+
+        fetch(csvUrl)
+            .then(response => response.text())
+            .then(data => {
+                const rows = data.split('\n');
+                const headerRowData = rows[0].split(','); // Use row 1 data as labels
+                const rowData = savedRowIndex ? rows[savedRowIndex].split(',') : null;
+
+                const rowDataContainer = document.getElementById('rowData');
+
+                if (rowData) {
+                    rowData.forEach((value, index) => {
+                        const label = document.createElement('p');
+                        label.textContent = `${headerRowData[index]}:`;
+                        rowDataContainer.appendChild(label);
+
+                        const inputBox = document.createElement('input');
+                        inputBox.type = 'text';
+                        inputBox.value = value.trim();
+                        rowDataContainer.appendChild(inputBox);
+                    });
+                } else {
+                    const message = document.createElement('p');
+                    message.textContent = 'No data found for the selected row index.';
+                    rowDataContainer.appendChild(message);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching CSV data:', error);
+            });
+
+        function saveChanges() {
+            const inputBoxes = document.querySelectorAll('#rowData input');
+            const updatedData = Array.from(inputBoxes).map(input => input.value);
+
+            // Get the saved row index from localStorage
+            const savedRowIndex = localStorage.getItem('rowIndex');
+
+            // Send the updated data and row index to the Google Apps Script
+            fetch('https://script.google.com/macros/s/AKfycbxH6i4_RQUVm4Ba20GOF6kp67U3WKpWr6iNKCSNwhWPvd5rdIhX9GMpx1fhCwzXBWiwFQ/exec', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `data=${encodeURIComponent(updatedData.join(','))}&rowIndex=${savedRowIndex}`,
+            })
+                .then(response => response.text())
+                .then(responseText => {
+                    console.log('Response:', responseText);
+                    // Show save message
+                    const saveMessage = document.getElementById('saveMessage');
+                    saveMessage.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error updating data:', error);
+                });
+        }
+    </script>
+</body>
+
+</html>
